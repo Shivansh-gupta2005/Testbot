@@ -1,0 +1,163 @@
+// Motor control pins (adjust according to wiring)
+const int pwm1 = 3;   // PWM for Front-Left motor
+const int dir1 = 4;   // DIR for Front-Left motor
+const int pwm2 = 5;   // PWM for Front-Right motor
+const int dir2 = 6;   // DIR for Front-Right motor
+const int pwm3 = 7;   // PWM for Back-Left motor
+const int dir3 = 8;   // DIR for Back-Left motor
+const int pwm4 = 9;   // PWM for Back-Right motor
+const int dir4 = 10;  // DIR for Back-Right motor
+
+// RC channels connected to Teensy pins
+const int ch1Pin = 22;  // Channel 1 (forward/backward)
+const int ch2Pin = 23;  // Channel 2 (left/right)
+const int ch3Pin = 24;  // Channel 3 (spin left)
+const int ch4Pin = 25;  // Channel 4 (spin right)
+const int ch5Pin = 26;  // Channel 5 (stop)
+
+// PWM signal range for the FS-R6B (typically 1000-2000 microseconds)
+const int pwmMin = 1000;
+const int pwmMax = 2000;
+
+// Speed control variable
+int motorSpeed = 0;
+
+void setup() {
+  // Initialize motor control pins
+  pinMode(pwm1, OUTPUT);
+  pinMode(dir1, OUTPUT);
+  pinMode(pwm2, OUTPUT);
+  pinMode(dir2, OUTPUT);
+  pinMode(pwm3, OUTPUT);
+  pinMode(dir3, OUTPUT);
+  pinMode(pwm4, OUTPUT);
+  pinMode(dir4, OUTPUT);
+  
+  // Initialize RC channel pins
+  pinMode(ch1Pin, INPUT);
+  pinMode(ch2Pin, INPUT);
+  pinMode(ch3Pin, INPUT);
+  pinMode(ch4Pin, INPUT);
+  pinMode(ch5Pin, INPUT);
+  
+  // Start serial communication for debugging
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Read RC signals (PWM) from FS-R6B
+  int ch1Value = pulseIn(ch1Pin, HIGH);  // Forward/Backward
+  int ch2Value = pulseIn(ch2Pin, HIGH);  // Left/Right
+  int ch3Value = pulseIn(ch3Pin, HIGH);  // Spin left
+  int ch4Value = pulseIn(ch4Pin, HIGH);  // Spin right
+  int ch5Value = pulseIn(ch5Pin, HIGH);  // Stop
+
+  // Control Forward/Backward movement
+  if (ch1Value > 1500) {
+    // Forward
+    motorSpeed = map(ch1Value, 1500, pwmMax, 0, 255);
+    moveForward();
+  } else if (ch1Value < 1500) {
+    // Backward
+    motorSpeed = map(ch1Value, pwmMin, 1500, 0, 255);
+    moveBackward();
+  } else {
+    stopMotors();
+  }
+
+  // Control Left/Right movement
+  if (ch2Value > 1500) {
+    moveRight();
+  } else if (ch2Value < 1500) {
+    moveLeft();
+  }
+
+  // Control Spin Left/Right
+  if (ch3Value > 1500) {
+    spinLeft();
+  } else if (ch4Value > 1500) {
+    spinRight();
+  }
+
+  // Stop function (if needed)
+  if (ch5Value > 1500) {
+    stopMotors();
+  }
+
+  // Small delay to avoid flooding the Serial Monitor
+  delay(100);
+}
+
+// Move functions for each direction
+void moveForward() {
+  motorForward(pwm1, dir1);
+  motorForward(pwm2, dir2);
+  motorForward(pwm3, dir3);
+  motorForward(pwm4, dir4);
+  Serial.println("Moving Forward");
+}
+
+void moveBackward() {
+  motorBackward(pwm1, dir1);
+  motorBackward(pwm2, dir2);
+  motorBackward(pwm3, dir3);
+  motorBackward(pwm4, dir4);
+  Serial.println("Moving Backward");
+}
+
+void moveLeft() {
+  // Move left (left wheels move backward, right wheels move forward)
+  motorBackward(pwm1, dir1);
+  motorForward(pwm2, dir2);
+  motorForward(pwm3, dir3);
+  motorBackward(pwm4, dir4);
+  Serial.println("Moving Left");
+}
+
+void moveRight() {
+  // Move right (left wheels move forward, right wheels move backward)
+  motorForward(pwm1, dir1);
+  motorBackward(pwm2, dir2);
+  motorBackward(pwm3, dir3);
+  motorForward(pwm4, dir4);
+  Serial.println("Moving Right");
+}
+
+void spinLeft() {
+  // Spin left (left wheels backward, right wheels forward)
+  motorBackward(pwm1, dir1);
+  motorForward(pwm2, dir2);
+  motorBackward(pwm3, dir3);
+  motorForward(pwm4, dir4);
+  Serial.println("Spinning Left");
+}
+
+void spinRight() {
+  // Spin right (left wheels forward, right wheels backward)
+  motorForward(pwm1, dir1);
+  motorBackward(pwm2, dir2);
+  motorForward(pwm3, dir3);
+  motorBackward(pwm4, dir4);
+  Serial.println("Spinning Right");
+}
+
+void stopMotors() {
+  // Stop all motors
+  analogWrite(pwm1, 0);
+  analogWrite(pwm2, 0);
+  analogWrite(pwm3, 0);
+  analogWrite(pwm4, 0);
+  Serial.println("Stopped");
+}
+
+// Motor control helper functions
+void motorForward(int pwmPin, int dirPin) {
+  digitalWrite(dirPin, HIGH);  // Set direction to forward
+  analogWrite(pwmPin, motorSpeed);  // Set speed
+}
+
+void motorBackward(int pwmPin, int dirPin) {
+  digitalWrite(dirPin, LOW);  // Set direction to backward
+  analogWrite(pwmPin, motorSpeed);  // Set speed
+}
+=
