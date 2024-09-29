@@ -1,11 +1,11 @@
-#define DIR1 3
-#define PWM1 4
-#define DIR2 5
-#define PWM2 6
-#define DIR3 7
-#define PWM3 8
-#define DIR4 9
-#define PWM4 12
+#define DIR1 2
+#define PWM1 3
+#define DIR2 6
+#define PWM2 9
+#define DIR3 20
+#define PWM3 22
+#define DIR4 21
+#define PWM4 23
 
 
 void setup(){
@@ -108,11 +108,8 @@ void spinleft(){
   digitalWrite(DIR3,LOW);
   digitalWrite(DIR4,LOW);digitalWrite(PWM1,HIGH);
   analogWrite(PWM1,1024);
-  Serial.println("1");
   analogWrite(PWM2,1024);
-  Serial.println("2");
   analogWrite(PWM3,1024);
-  Serial.println("3");
   analogWrite(PWM4,1024);
   
 }
