@@ -1,0 +1,59 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // Set address and display size
+
+const int ANALOG_PIN = 38;
+const int NUM_SAMPLES = 10;           // Number of samples for averaging
+const float VOLTAGE_REFERENCE = 22.2; // Maximum voltage
+const float ADC_RESOLUTION = 1024.0;  // 10-bit resolution
+
+float getAverageVoltage() {
+  long sum = 0;
+  
+  // Take multiple samples
+  for(int i = 0; i < NUM_SAMPLES; i++) {
+    sum += analogRead(ANALOG_PIN);
+    delay(1);  // Small delay between readings
+  }
+  
+  // Calculate average and convert to voltage
+  float average = (float)sum / NUM_SAMPLES;
+  return (average * VOLTAGE_REFERENCE) / ADC_RESOLUTION;
+}
+
+void setup() {
+  Wire1.begin();       // Initialize I2C1 communication
+  lcd.begin(&Wire1);   // Initialize LCD with Wire1
+  lcd.init();          
+  lcd.backlight();     
+  
+  // Initialize analog pin
+  pinMode(ANALOG_PIN, INPUT);
+  analogReadResolution(10);  // Set to 10-bit resolution
+  
+  // Display initial message
+  lcd.setCursor(0, 0);
+  lcd.print("Voltage Monitor");
+  delay(1000);
+  lcd.clear();
+}
+
+void loop() {
+  // Get voltage reading
+  float voltage = getAverageVoltage();
+  
+  // Display voltage on first line
+  lcd.setCursor(0, 0);
+  lcd.print("Voltage: ");
+  lcd.print(voltage, 2);  // Display with 2 decimal places
+  lcd.print("V    ");
+  
+  // Optional: Display raw ADC value on second line
+  lcd.setCursor(0, 1);
+  lcd.print("ADC: ");
+  lcd.print(analogRead(ANALOG_PIN));
+  lcd.print("    ");
+  
+  delay(100);  // Update rate
+}
