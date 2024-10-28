@@ -1,20 +1,14 @@
 #include <ros.h>
-#include <std_msgs/Int32.h>
+#include <std_msgs/Int32MultiArray.h>
 
 // ROS node handle
 ros::NodeHandle nh;
 
-// ROS messages for each encoder
-std_msgs::Int32 enc1_msg;
-std_msgs::Int32 enc2_msg;
-std_msgs::Int32 enc3_msg;
-std_msgs::Int32 enc4_msg;
+// ROS message for all encoders
+std_msgs::Int32MultiArray enc_msg;
 
-// ROS publishers for each encoder
-ros::Publisher enc1_pub("encoder1", &enc1_msg);
-ros::Publisher enc2_pub("encoder2", &enc2_msg);
-ros::Publisher enc3_pub("encoder3", &enc3_msg);
-ros::Publisher enc4_pub("encoder4", &enc4_msg);
+// ROS publisher for encoder data
+ros::Publisher enc_pub("encoders", &enc_msg);
 
 // Define encoder pins for all 4 encoders
 const int ENCODER_PINS[4][2] = {
@@ -23,6 +17,9 @@ const int ENCODER_PINS[4][2] = {
   {16, 17},   // Encoder 3: Pins 6 & 7
   {21, 23}    // Encoder 4: Pins 8 & 9
 };
+
+// Array to hold encoder positions for publishing
+int32_t encoder_positions[4];
 
 // Structure to hold encoder data
 struct EncoderData {
@@ -58,11 +55,12 @@ void setup() {
   // Initialize ROS node
   nh.initNode();
   
-  // Advertise publishers
-  nh.advertise(enc1_pub);
-  nh.advertise(enc2_pub);
-  nh.advertise(enc3_pub);
-  nh.advertise(enc4_pub);
+  // Initialize the message array
+  enc_msg.data_length = 4;
+  enc_msg.data = encoder_positions;
+  
+  // Advertise publisher
+  nh.advertise(enc_pub);
   
   // Initialize all encoder pins and interrupts
   for (int i = 0; i < 4; i++) {
@@ -74,6 +72,7 @@ void setup() {
     encoders[i].position = 0;
     encoders[i].previousState = 0;
     encoders[i].lastDebounceTime = 0;
+    encoder_positions[i] = 0;
   }
   
   // Attach interrupts for both pins of each encoder
@@ -94,17 +93,15 @@ void loop() {
   // Publish encoder positions every 50ms
   static unsigned long lastPublishTime = 0;
   if (millis() - lastPublishTime >= 50) {
-    // Update messages with current positions
-    enc1_msg.data = encoders[0].position;
-    enc2_msg.data = encoders[1].position;
-    enc3_msg.data = encoders[2].position;
-    enc4_msg.data = encoders[3].position;
+    // Update array with current positions
+    noInterrupts(); // Disable interrupts while copying volatile data
+    for(int i = 0; i < 4; i++) {
+      encoder_positions[i] = encoders[i].position;
+    }
+    interrupts(); // Re-enable interrupts
     
-    // Publish all messages
-    enc1_pub.publish(&enc1_msg);
-    enc2_pub.publish(&enc2_msg);
-    enc3_pub.publish(&enc3_msg);
-    enc4_pub.publish(&enc4_msg);
+    // Publish message
+    enc_pub.publish(&enc_msg);
     
     lastPublishTime = millis();
   }
@@ -153,6 +150,7 @@ void handleEncoder(int encoderIndex) {
 void resetEncoder(int encoderIndex) {
   if (encoderIndex >= 0 && encoderIndex < 4) {
     encoders[encoderIndex].position = 0;
+    encoder_positions[encoderIndex] = 0;
   }
 }
 
@@ -160,5 +158,6 @@ void resetEncoder(int encoderIndex) {
 void resetAllEncoders() {
   for (int i = 0; i < 4; i++) {
     encoders[i].position = 0;
+    encoder_positions[i] = 0;
   }
 }
