@@ -1,47 +1,40 @@
-#include<IntervalTimer.h>
-#include<Wire.h>
-#include<LiquidCrystal_I2C.h>
-#include<ros.h>
-#include<MPU9250.h>
-#include<Kalman.h>
-#include<sensor_msgs/Imu.h>
+#include <Wire.h>
+#include <MPU9250.h>
+#include <Kalman.h>
+#include <ros.h>
+#include <sensor_msgs/Imu.h>
 #include <TinyGPS++.h>
 #include <HardwareSerial.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/NavSatStatus.h>
-#include <std_msgs/Int32.h>
+#include <std_msgs/Int32MultiArray.h>
+#include <IntervalTimer.h>
 
-
-int analogValue = analogRead(38);
+// IMU Setup
 MPU9250 mpu;
-LiquidCrystal_I2C lcd(0x27, 16, 2); 
-
 Kalman kalmanYaw, kalmanPitch, kalmanRoll;
-const float Q_angle = 0.001; 
-const float Q_bias = 0.003;   
-const float R_measure = 0.03; 
+const float Q_angle = 0.001;   // Process noise covariance for angle
+const float Q_bias = 0.003;    // Process noise covariance for bias
+const float R_measure = 0.03;  // Measurement noise covariance
+
 float angleYaw, anglePitch, angleRoll;
 
-TinyGPSPlus gps; 
-#define gpsSerial Serial1 
+// GPS Setup
+TinyGPSPlus gps;  // Create a GPS object
+#define gpsSerial Serial1  // Connect NEO-M8P-2's TX to Teensy's RX1 and RX to TX1
 
+// ROS Node Handle
 ros::NodeHandle nh;
 
+// ROS Publishers
 sensor_msgs::Imu imu_msg;
-ros::Publisher imu_pub("imu_data",&imu_msg);
+ros::Publisher imu_pub("imu_data", &imu_msg);
 
 sensor_msgs::NavSatFix navsat_msg;
-ros::Publisher navsat_pub("navsatfix",&navsat_msg);
+ros::Publisher navsat_pub("navsatfix", &navsat_msg);
 
-std_msgs::Int32 enc1_msg;
-std_msgs::Int32 enc2_msg;
-std_msgs::Int32 enc3_msg;
-std_msgs::Int32 enc4_msg;
-
-ros::Publisher enc1_pub("encoder1", &enc1_msg);
-ros::Publisher enc2_pub("encoder2", &enc2_msg);
-ros::Publisher enc3_pub("encoder3", &enc3_msg);
-ros::Publisher enc4_pub("encoder4", &enc4_msg);
+std_msgs::Int32MultiArray enc_msg;
+ros::Publisher enc_pub("encoders", &enc_msg);
 
 const int ENCODER_PINS[4][2] = {
   {2, 3},   // Encoder 1: Pins 2 & 3
@@ -50,6 +43,10 @@ const int ENCODER_PINS[4][2] = {
   {21, 23}    // Encoder 4: Pins 8 & 9
 };
 
+// Array to hold encoder positions for publishing
+int32_t encoder_positions[4];
+
+// Structure to hold encoder data
 struct EncoderData {
   volatile long position;
   volatile byte previousState;
@@ -79,28 +76,23 @@ void encoder4ISR() {
   handleEncoder(3);
 }
 
+// Timers
+IntervalTimer imuTimer;
+IntervalTimer gpsTimer;
+IntervalTimer encoderTimer;
 
+void setup() {
+    Serial.begin(115200);
+    while (!Serial);  // Wait for the serial connection to establish
 
-IntervalTimer lcd_timer;
-IntervalTimer imu_timer;
-IntervalTimer gps_timer;
-IntervalTimer encoder_timer;
-
-void setup(){
-  Serial.begin(115200);
-  Wire.begin();
-  lcd.begin(16,2);
-  lcd.init();
-  lcd.backlight();
-  pinMode(38,INPUT);
-  analogReadResolution(10);
-  while (!Serial); 
-
-if (!mpu.setup(0x68)) {
+    // Initialize MPU9250
+    Wire.begin();
+    if (!mpu.setup(0x68)) {
         Serial.println("MPU connection failed. Check your connection.");
         while (1);
     }
 
+    // Initialize Kalman filters
     kalmanYaw.setAngle(0);
     kalmanPitch.setAngle(0);
     kalmanRoll.setAngle(0);
@@ -114,17 +106,13 @@ if (!mpu.setup(0x68)) {
     kalmanRoll.setQbias(Q_bias);
     kalmanRoll.setRmeasure(R_measure);
 
-    gpsSerial.begin(9600);
+    // Start UART communication with NEO-M8P-2
+    gpsSerial.begin(9600);  // Set baud rate to 9600
 
-  
-  
-  // Advertise publishers
-  nh.advertise(enc1_pub);
-  nh.advertise(enc2_pub);
-  nh.advertise(enc3_pub);
-  nh.advertise(enc4_pub);
-  
-  // Initialize all encoder pins and interrupts
+     enc_msg.data_length = 4;
+     enc_msg.data = encoder_positions;
+
+       // Initialize all encoder pins and interrupts
   for (int i = 0; i < 4; i++) {
     // Configure pins as inputs with pullup resistors
     pinMode(ENCODER_PINS[i][0], INPUT_PULLUP);
@@ -134,6 +122,7 @@ if (!mpu.setup(0x68)) {
     encoders[i].position = 0;
     encoders[i].previousState = 0;
     encoders[i].lastDebounceTime = 0;
+    encoder_positions[i] = 0;
   }
   
   // Attach interrupts for both pins of each encoder
@@ -149,33 +138,28 @@ if (!mpu.setup(0x68)) {
   attachInterrupt(digitalPinToInterrupt(ENCODER_PINS[3][0]), encoder4ISR, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENCODER_PINS[3][1]), encoder4ISR, CHANGE);
 
-  nh.initNode();
-  nh.advertise(imu_pub);
-  nh.advertise(navsat_pub);
-    nh.advertise(enc1_pub);
-  nh.advertise(enc2_pub);
-  nh.advertise(enc3_pub);
-  nh.advertise(enc4_pub);
-  lcd_timer.begin(display_LCD,150000);
-  imu_timer.begin(readIMU,150000);
-  gps_timer.begin(readGPS,150000);
-  encoder_timer.begin(readEncoder,5000000);
+    // Initialize ROS node
+    nh.initNode();
+    nh.advertise(imu_pub);
+    nh.advertise(navsat_pub);
+     nh.advertise(enc_pub);
+    
 
+    // Start timers
+    imuTimer.begin(readIMUTask, 15 * 1000);  // IMU update every 25 ms
+    gpsTimer.begin(readGPSTask, 25 * 1000); // GPS update every 100 ms
+    encoderTImer.begin(readEncoderTask,50*1000)
+
+    Serial.println("Initialization complete.");
 }
 
-
-
-void  display_LCD(){
-  
-  float voltage = (analogValue * 22.2) / 1024.0;
-  lcd.setCursor(0, 0);
-  lcd.print("Voltage: ");
-  lcd.print(voltage, 2);  
-  lcd.print("V    ");
+void loop() {
+    nh.spinOnce();  // Process incoming ROS messages
 }
 
-void readIMU(){
-  if (mpu.update()) {
+// Function to read IMU data and publish it
+void readIMUTask() {
+    if (mpu.update()) {
         float gyroX = mpu.getGyroX();
         float gyroY = mpu.getGyroY();
         float gyroZ = mpu.getGyroZ();
@@ -215,9 +199,10 @@ void readIMU(){
     }
 }
 
-
-void readGPS(){
-     while (gpsSerial.available() > 0) {
+// Function to read GPS data and publish it
+void readGPSTask() {
+    // Check if GPS data is available
+    while (gpsSerial.available() > 0) {
         char c = gpsSerial.read();
         gps.encode(c);  // Feed the characters to the GPS object
     }
@@ -248,34 +233,27 @@ void readGPS(){
         Serial.print(navsat_msg.altitude);
         Serial.println(" m");
     }
-
-
 }
 
-
-void readEncoder(){
-    static unsigned long lastPublishTime = 0;
+void readEncoderTask(){
+    // Publish encoder positions every 50ms
+  static unsigned long lastPublishTime = 0;
   if (millis() - lastPublishTime >= 50) {
-    // Update messages with current positions
-    enc1_msg.data = encoders[0].position;
-    enc2_msg.data = encoders[1].position;
-    enc3_msg.data = encoders[2].position;
-    enc4_msg.data = encoders[3].position;
+    // Update array with current positions
+    noInterrupts(); // Disable interrupts while copying volatile data
+    for(int i = 0; i < 4; i++) {
+      encoder_positions[i] = encoders[i].position;
+    }
+    interrupts(); // Re-enable interrupts
     
-    // Publish all messages
-    enc1_pub.publish(&enc1_msg);
-    enc2_pub.publish(&enc2_msg);
-    enc3_pub.publish(&enc3_msg);
-    enc4_pub.publish(&enc4_msg);
+    // Publish message
+    enc_pub.publish(&enc_msg);
     
     lastPublishTime = millis();
   }
 }
 
-void loop(){
-  analogValue = analogRead(38); // Read voltage continuously
-  nh.spinOnce();
-}
+
 
 // Handler for encoder state changes
 void handleEncoder(int encoderIndex) {
@@ -313,16 +291,3 @@ void handleEncoder(int encoderIndex) {
   }
 }
 
-// Optional: Function to reset specific encoder position
-void resetEncoder(int encoderIndex) {
-  if (encoderIndex >= 0 && encoderIndex < 4) {
-    encoders[encoderIndex].position = 0;
-  }
-}
-
-// Optional: Function to reset all encoder positions
-void resetAllEncoders() {
-  for (int i = 0; i < 4; i++) {
-    encoders[i].position = 0;
-  }
-}
