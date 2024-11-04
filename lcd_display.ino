@@ -16,8 +16,8 @@ const float current_sensor_offset = voltage_reference / 2; // Offset voltage at 
 void setup() {
   // Initialize I2C communication
   Wire.begin();
-  Wire.setSDA(24);  // Set SDA pin
-  Wire.setSCL(25);  // Set SCL pin
+  Wire.setSDA(25);  // Set SDA pin
+  Wire.setSCL(24);  // Set SCL pin
   
   // Initialize LCD
   lcd.init();
