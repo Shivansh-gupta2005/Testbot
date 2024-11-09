@@ -9,6 +9,7 @@
 #include <sensor_msgs/NavSatStatus.h>
 #include <std_msgs/Int32MultiArray.h>
 #include <IntervalTimer.h>
+#include<LiquidCrystal_I2C.h>
 
 // IMU Setup
 MPU9250 mpu;
