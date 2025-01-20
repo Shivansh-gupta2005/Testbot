@@ -132,83 +132,115 @@ void loop() {
 void handleRoot() {
     server.send(200, "text/html", index_html);
 }
-
-void moveForward() {
-    digitalWrite(DIR1, HIGH);
-    digitalWrite(DIR2, LOW);
-    digitalWrite(DIR3, LOW);
-    digitalWrite(DIR4, LOW);
-    analogWrite(PWM1, 255);
-    analogWrite(PWM2, 0);
-    analogWrite(PWM3, 255);
-    analogWrite(PWM4, 0);
-    server.send(200, "text/plain", "Moving forward");
+void moveforward() {
+  digitalWrite(DIR1, HIGH);
+  digitalWrite(DIR2, LOW);
+  digitalWrite(DIR3, LOW);
+  digitalWrite(DIR4, HIGH);
+  analogWrite(PWM1, 1023);  
+  analogWrite(PWM2, 0);
+  analogWrite(PWM3, 0);
+  analogWrite(PWM4, 1023);  
+  server.send(200, "text/plain", "Moving forward");
 }
 
-void moveLeft() {
-    digitalWrite(DIR1, LOW);
-    digitalWrite(DIR2, HIGH);
-    digitalWrite(DIR3, LOW);
-    digitalWrite(DIR4, HIGH);
-    analogWrite(PWM1, 0);
-    analogWrite(PWM2, 255);
-    analogWrite(PWM3, 0);
-    analogWrite(PWM4, 255);
-    server.send(200, "text/plain", "Moving left");
+void moveleft() {
+  digitalWrite(DIR1, LOW);
+  digitalWrite(DIR2, HIGH);
+  digitalWrite(DIR3, HIGH);
+  digitalWrite(DIR4, LOW);
+  analogWrite(PWM1, 0);
+  analogWrite(PWM2, 1023);  
+  analogWrite(PWM3, 1023);  
+  analogWrite(PWM4, 0);
+  server.send(200, "text/plain", "Moving left");
+  
 }
 
-void moveBackward() {
-    digitalWrite(DIR1, LOW);
-    digitalWrite(DIR2, LOW);
-    digitalWrite(DIR3, HIGH);
-    digitalWrite(DIR4, LOW);
-    analogWrite(PWM1, 255);
-    analogWrite(PWM2, 0);
-    analogWrite(PWM3, 255);
-    analogWrite(PWM4, 0);
-    server.send(200, "text/plain", "Moving backward");
+void movebackward() {
+  digitalWrite(DIR1, LOW);
+  digitalWrite(DIR2, LOW);
+  digitalWrite(DIR3, LOW);
+  digitalWrite(DIR4, LOW);
+  analogWrite(PWM1, 1023);  
+  analogWrite(PWM2, 0);
+  analogWrite(PWM3, 0);
+  analogWrite(PWM4, 1023); 
+  server.send(200, "text/plain", "Moving backward");
+  
 }
 
-void moveRight() {
-    digitalWrite(DIR1, LOW);
-    digitalWrite(DIR2, LOW);
-    digitalWrite(DIR3, LOW);
-    digitalWrite(DIR4, LOW);
-    analogWrite(PWM1, 0);
-    analogWrite(PWM2, 255);
-    analogWrite(PWM3, 0);
-    analogWrite(PWM4, 255);
-    server.send(200, "text/plain", "Moving right");
+void moveright() {
+  digitalWrite(DIR1, LOW);
+  digitalWrite(DIR2, LOW);
+  digitalWrite(DIR3, LOW);
+  digitalWrite(DIR4, LOW);
+  analogWrite(PWM1, 0);
+  analogWrite(PWM2, 1023);  
+  analogWrite(PWM3, 1023);  
+  analogWrite(PWM4, 0);
+  server.send(200, "text/plain", "Moving right");
+  
 }
 
-void spinLeft() {
-    digitalWrite(DIR1, LOW);
-    digitalWrite(DIR2, HIGH);
-    digitalWrite(DIR3, LOW);
-    digitalWrite(DIR4, LOW);
-    analogWrite(PWM1, 255);
-    analogWrite(PWM2, 255);
-    analogWrite(PWM3, 255);
-    analogWrite(PWM4, 255);
-    server.send(200, "text/plain", "Spinning left");
+void spinleft() {
+  digitalWrite(DIR1, HIGH);
+  digitalWrite(DIR2, LOW);
+  digitalWrite(DIR3, HIGH);
+  digitalWrite(DIR4, LOW);
+  analogWrite(PWM1, 1023);  
+  analogWrite(PWM2, 1023);  
+  analogWrite(PWM3, 1023);  
+  analogWrite(PWM4, 1023);  
+  server.send(200, "text/plain", "Spinning right");
+    
 }
 
-void spinRight() {
-    digitalWrite(DIR1, HIGH);
-    digitalWrite(DIR2, LOW);
-    digitalWrite(DIR3, HIGH);
-    digitalWrite(DIR4, HIGH);
-    analogWrite(PWM1, 255);
-    analogWrite(PWM2, 255);
-    analogWrite(PWM3, 255);
-    analogWrite(PWM4, 255);
-    server.send(200, "text/plain", "Spinning right");
+void spinright() {
+  digitalWrite(DIR1, LOW);
+  digitalWrite(DIR2, HIGH);
+  digitalWrite(DIR3, LOW);
+  digitalWrite(DIR4, HIGH);
+  analogWrite(PWM1, 1023);
+  analogWrite(PWM2, 1023);  
+  analogWrite(PWM3, 1023);  
+  analogWrite(PWM4, 1023);  
+  server.send(200, "text/plain", "Spinning left");
 }
 
-void stopMotors() {
-    analogWrite(PWM1, 0);
-    analogWrite(PWM2, 0);
-    analogWrite(PWM3, 0);
-    analogWrite(PWM4, 0);
-    server.send(200, "text/plain", "Stopped");
+void diagonalforward(){
+  digitalWrite(DIR1, HIGH);
+  digitalWrite(DIR2, HIGH);
+  digitalWrite(DIR3, HIGH);
+  digitalWrite(DIR4, HIGH);
+  analogWrite(PWM1, 1023);
+  analogWrite(PWM2, 1023);  
+  analogWrite(PWM3, 1023);  
+  analogWrite(PWM4, 1023);  
+  server.send(200, "text/plain", "Diagonal Forward");
 }
+
+
+void diagonalbackward() {
+  digitalWrite(DIR1, LOW);
+  digitalWrite(DIR2, LOW);
+  digitalWrite(DIR3, LOW);
+  digitalWrite(DIR4, LOW);
+  analogWrite(PWM1, 1023);
+  analogWrite(PWM2, 1023);  
+  analogWrite(PWM3, 1023);  
+  analogWrite(PWM4, 1023);  
+  server.send(200, "text/plain", "Diagonal Backward");
+  
+}
+
+
+void stopmotors() {
+  analogWrite(PWM1, 0);
+  analogWrite(PWM2, 0);
+  analogWrite(PWM3, 0);
+  analogWrite(PWM4, 0);
+  server.send(200, "text/plain", "Stopped");
+}
+
+
